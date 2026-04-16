@@ -125,7 +125,7 @@ def build_prompt(method, results, result, model=None):
         subject = result['subject']
         few_shot = build_few_shot(results, subject)
 
-    system_prompt = f"""请直接给出正确选项的字母，不要任何其他的文字说明。\n{few_shot}"""
+    system_prompt = f"""请直接给出正确选项的字母，不要任何其他的文字说明。\n"""
 
     question_prompt = result["full_question"]
     prompt = fr"""
