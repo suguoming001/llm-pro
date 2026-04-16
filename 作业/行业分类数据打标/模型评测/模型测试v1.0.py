@@ -14,11 +14,10 @@ MODEL_CONFIGS = {
     "deepseek-chat": {"api_key": os.getenv("DEEPSEEK_API_KEY"), "base_url": os.getenv("DEEPSEEK_BASE_URL")},
     "openai/gpt-5-nano": {"api_key": os.getenv("OPENROUTER_API_KEY"), "base_url": os.getenv("OPENROUTER_BASE_URL")}
 }
-SHOT_COUNT = 5
 methods = ["zero-shot", "zero-shot-cot", "few-shot", "few-shot-cot"]
 answer_map = {0: 'A', 1: 'B', 2: 'C', 3: 'D', 4: 'E', 5: 'F', 6: 'G'}
 
-COLLEGE_BIOLOGY_FEW_SHOT = """
+COLLEGE_BIOLOGY_FEW_SHOT = r"""
 问题1:Approximately what fraction of the human genome encodes proteins?
 A.2%
 B.25%
@@ -240,7 +239,7 @@ def build_prompt(method, result):
         few_shot = few_shot_dict[subject]
 
     system_prompt = f"""请直接给出正确选项的字母，不要任何其他的文字说明。\n{few_shot}"""
-    prompt = result["full_question"]
+    prompt = "请直接给出正确选项的字母，不要任何其他的文字说明。\n"+result["full_question"]
 
     if 'cot' in method:
         prompt += """ \n Let's think step by step. """
@@ -262,7 +261,7 @@ for index, result in enumerate(results):
             raw_output = call_llm(model, system_prompt, prompt)
             prediction = extract_answer(raw_output)
             latency = time.time() - start_time
-            is_correct = (raw_output.strip() == prediction.strip())
+            is_correct = (prediction.strip() == correct_answer.strip())
             if is_correct:
                 scores[model][method] += 1
             print(
@@ -273,14 +272,15 @@ print("\n" + "=" * 60)
 print(" 最终评测得分汇总 (准确率 %)")
 print("=" * 60)
 
-results_list = []
+scores_list = []
+print(scores)
 for model in MODEL_CONFIGS.keys():
     row_data = {"Model": model}
     for method in methods:
         accuracy = (scores[model][method] / total_questions) * 100
         row_data[method] = f"{accuracy:.2f}%"
-    results_list.append(row_data)
-
-score_df = pd.DataFrame(results_list)
+    scores_list.append(row_data)
+print(scores_list)
+score_df = pd.DataFrame(scores_list)
 score_df.set_index("Model", inplace=True)
 print(score_df.to_markdown())
