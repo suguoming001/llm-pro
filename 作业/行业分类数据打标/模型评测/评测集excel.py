@@ -3,6 +3,9 @@ import logging
 import pandas as pd
 from modelscope.msdatasets import MsDataset
 
+# astronomy -》天文学
+# anatomy  -》解剖学
+# college_biology -》大学生物学
 TARGET_CATEGORIES = ['anatomy', 'astronomy', 'college_biology']
 SAMPLES_PER_CATEGORY = 20
 
