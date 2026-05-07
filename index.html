@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Pro - 大模型课程作业</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;700;900&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #12121a;
+    --bg-card: #16161f;
+    --bg-card-hover: #1c1c28;
+    --accent-cyan: #00f0ff;
+    --accent-magenta: #ff2d95;
+    --accent-yellow: #f0ff00;
+    --accent-orange: #ff6b2b;
+    --text-primary: #e8e8f0;
+    --text-secondary: #8888a0;
+    --text-dim: #555570;
+    --border: #2a2a3a;
+    --glow-cyan: 0 0 20px rgba(0, 240, 255, 0.3);
+    --glow-magenta: 0 0 20px rgba(255, 45, 149, 0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-cyan) var(--bg-secondary);
+  }
+
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ===== Canvas Background ===== */
+  #bg-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ===== Noise Overlay ===== */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  .container {
+    position: relative;
+    z-index: 2;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* ===== Header / Hero ===== */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    padding: 2rem 0;
+  }
+
+  .hero-grid {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px; height: 600px;
+    background:
+      linear-gradient(90deg, var(--border) 1px, transparent 1px),
+      linear-gradient(var(--border) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: 0.15;
+    mask-image: radial-gradient(circle, black 30%, transparent 70%);
+    -webkit-mask-image: radial-gradient(circle, black 30%, transparent 70%);
+    animation: gridPulse 8s ease-in-out infinite;
+  }
+
+  @keyframes gridPulse {
+    0%, 100% { opacity: 0.1; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.2; transform: translate(-50%, -50%) scale(1.05); }
+  }
+
+  .hero-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent-cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.4em;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s ease forwards 0.3s;
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(3rem, 8vw, 7rem);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s ease forwards 0.5s;
+  }
+
+  .hero-title .line1 {
+    display: block;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-title .line2 {
+    display: block;
+    background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-magenta) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-subtitle {
+    font-family: 'Noto Sans SC', sans-serif;
+    font-weight: 300;
+    font-size: clamp(1rem, 2vw, 1.4rem);
+    color: var(--text-secondary);
+    margin-top: 1.5rem;
+    max-width: 600px;
+    line-height: 1.8;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s ease forwards 0.7s;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 3rem;
+    margin-top: 3rem;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s ease forwards 0.9s;
+  }
+
+  .stat {
+    text-align: left;
+  }
+
+  .stat-number {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2.5rem;
+    color: var(--accent-cyan);
+  }
+
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-top: 0.25rem;
+  }
+
+  .scroll-indicator {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0;
+    animation: fadeSlideUp 0.8s ease forwards 1.2s;
+  }
+
+  .scroll-indicator span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(to bottom, var(--accent-cyan), transparent);
+    animation: scrollBounce 2s ease-in-out infinite;
+  }
+
+  @keyframes scrollBounce {
+    0%, 100% { transform: scaleY(1); opacity: 1; }
+    50% { transform: scaleY(0.5); opacity: 0.3; }
+  }
+
+  /* ===== Section Headers ===== */
+  .section {
+    padding: 6rem 0;
+    position: relative;
+  }
+
+  .section-header {
+    margin-bottom: 4rem;
+    position: relative;
+  }
+
+  .section-number {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 8rem;
+    color: var(--bg-card);
+    position: absolute;
+    top: -3rem;
+    left: -1rem;
+    line-height: 1;
+    user-select: none;
+    z-index: -1;
+  }
+
+  .section-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-magenta);
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    margin-bottom: 0.75rem;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: clamp(2rem, 4vw, 3rem);
+    color: var(--text-primary);
+  }
+
+  .section-desc {
+    font-weight: 300;
+    color: var(--text-secondary);
+    margin-top: 1rem;
+    max-width: 700px;
+    line-height: 1.8;
+    font-size: 1rem;
+  }
+
+  /* ===== Homework Cards ===== */
+  .hw-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+
+  .hw-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: default;
+  }
+
+  .hw-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--card-accent, var(--accent-cyan));
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .hw-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--card-accent, var(--accent-cyan));
+    transform: translateX(8px);
+    box-shadow: -8px 0 30px rgba(0, 240, 255, 0.05);
+  }
+
+  .hw-card:hover::before {
+    transform: scaleY(1);
+  }
+
+  .hw-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+
+  .hw-card-id {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--card-accent, var(--accent-cyan));
+    letter-spacing: 0.2em;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--card-accent, var(--accent-cyan));
+    border-radius: 1px;
+  }
+
+  .hw-card-status {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--accent-yellow);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .hw-card-status::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent-yellow);
+    border-radius: 50%;
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hw-card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+    transition: color 0.3s;
+  }
+
+  .hw-card:hover .hw-card-title {
+    color: var(--card-accent, var(--accent-cyan));
+  }
+
+  .hw-card-desc {
+    font-weight: 300;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 1.5rem;
+  }
+
+  .hw-card-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .file-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    padding: 0.3rem 0.7rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    text-decoration: none;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .file-tag:hover {
+    color: var(--card-accent, var(--accent-cyan));
+    border-color: var(--card-accent, var(--accent-cyan));
+    background: rgba(0, 240, 255, 0.05);
+  }
+
+  .file-tag svg {
+    width: 10px; height: 10px;
+    fill: currentColor;
+    opacity: 0.5;
+  }
+
+  /* ===== Results Table ===== */
+  .results-block {
+    margin-top: 2rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  .results-block h4 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent-magenta);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 1rem;
+  }
+
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  .results-table th {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .results-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(42, 42, 58, 0.5);
+    color: var(--text-secondary);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+  }
+
+  .results-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .results-table .highlight {
+    color: var(--accent-cyan);
+    font-weight: 700;
+  }
+
+  .results-table .model-name {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  /* ===== Papers Grid ===== */
+  .papers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .paper-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 1.5rem;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: block;
+  }
+
+  .paper-card:hover {
+    border-color: var(--accent-orange);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(255, 107, 43, 0.1);
+  }
+
+  .paper-card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+  }
+
+  .paper-card:hover .paper-card-title {
+    color: var(--accent-orange);
+  }
+
+  .paper-card-link {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent-orange);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  /* ===== Materials Section ===== */
+  .materials-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .material-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 2rem;
+    text-decoration: none;
+    display: block;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .material-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 100%; height: 2px;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .material-card:hover {
+    background: var(--bg-card-hover);
+    transform: translateY(-4px);
+  }
+
+  .material-card:hover::after {
+    transform: scaleX(1);
+  }
+
+  .material-card-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .material-card-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .material-card:hover .material-card-title {
+    color: var(--accent-cyan);
+  }
+
+  .material-card-desc {
+    font-weight: 300;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  /* ===== Footer ===== */
+  .footer {
+    padding: 4rem 0;
+    border-top: 1px solid var(--border);
+    margin-top: 4rem;
+    text-align: center;
+  }
+
+  .footer-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+  }
+
+  .footer-link {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+
+  .footer-link:hover {
+    color: var(--accent-magenta);
+  }
+
+  /* ===== Checklist ===== */
+  .checklist-section {
+    padding: 4rem 0 2rem;
+  }
+
+  .checklist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .checklist-header-left {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+  }
+
+  .checklist-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.8rem;
+  }
+
+  .checklist-progress-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .checklist-progress-text .done-count {
+    color: var(--accent-cyan);
+    font-weight: 700;
+  }
+
+  .checklist-progress-text .total-count {
+    color: var(--text-secondary);
+  }
+
+  .progress-bar-wrap {
+    width: 200px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-magenta));
+    border-radius: 2px;
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 0%;
+  }
+
+  .checklist-filters {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    padding: 0.35rem 0.9rem;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: all 0.3s;
+  }
+
+  .filter-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+
+  .filter-btn.active {
+    color: var(--accent-cyan);
+    border-color: var(--accent-cyan);
+    background: rgba(0, 240, 255, 0.05);
+  }
+
+  .checklist-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .checklist-group {
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    background: var(--bg-card);
+  }
+
+  .checklist-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+  }
+
+  .checklist-group-header:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .checklist-group-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .group-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--group-accent, var(--accent-cyan));
+    border: 1px solid var(--group-accent, var(--accent-cyan));
+    padding: 0.2rem 0.6rem;
+    border-radius: 1px;
+    letter-spacing: 0.1em;
+  }
+
+  .group-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .group-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+  }
+
+  .group-arrow {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    transition: transform 0.3s;
+  }
+
+  .checklist-group.collapsed .group-arrow {
+    transform: rotate(-90deg);
+  }
+
+  .checklist-group.collapsed .checklist-items {
+    display: none;
+  }
+
+  .checklist-items {
+    padding: 0.5rem 0;
+  }
+
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    transition: background 0.2s;
+    cursor: default;
+  }
+
+  .checklist-item:hover {
+    background: rgba(255, 255, 255, 0.015);
+  }
+
+  .check-box {
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid var(--border);
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+
+  .check-box.checked {
+    border-color: var(--accent-cyan);
+    background: rgba(0, 240, 255, 0.1);
+  }
+
+  .check-box svg {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: var(--accent-cyan);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.2s;
+  }
+
+  .check-box.checked svg {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .item-text {
+    flex: 1;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    transition: all 0.3s;
+  }
+
+  .item-text.done {
+    color: var(--text-dim);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-dim);
+  }
+
+  .item-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    padding: 0.15rem 0.5rem;
+    border: 1px solid rgba(42, 42, 58, 0.6);
+    border-radius: 1px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+
+  .item-link {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+
+  .item-link:hover {
+    color: var(--accent-cyan);
+    border-color: var(--accent-cyan);
+  }
+
+  .checklist-summary {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1.5rem;
+    padding: 1.25rem 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+
+  .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .summary-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .summary-dot.done { background: var(--accent-cyan); }
+  .summary-dot.pending { background: var(--accent-orange); }
+
+  .summary-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+
+  .summary-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-left: 0.25rem;
+  }
+
+  .summary-value.done-val { color: var(--accent-cyan); }
+  .summary-value.pending-val { color: var(--accent-orange); }
+
+  /* ===== Animations ===== */
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ===== Divider ===== */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 2rem 0;
+  }
+
+  /* ===== Nav ===== */
+  .nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    backdrop-filter: blur(20px);
+    background: rgba(10, 10, 15, 0.8);
+    border-bottom: 1px solid rgba(42, 42, 58, 0.3);
+    transform: translateY(-100%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .nav.visible {
+    transform: translateY(0);
+  }
+
+  .nav-logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    transition: color 0.3s;
+  }
+
+  .nav-links a:hover {
+    color: var(--accent-cyan);
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 768px) {
+    .hero-stats { gap: 1.5rem; }
+    .stat-number { font-size: 1.8rem; }
+    .nav-links { display: none; }
+    .hw-card { padding: 1.5rem; }
+    .papers-grid { grid-template-columns: 1fr; }
+    .materials-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+
+<!-- Nav -->
+<nav class="nav" id="nav">
+  <div class="nav-logo">LLM PRO</div>
+  <ul class="nav-links">
+    <li><a href="#checklist">Checklist</a></li>
+    <li><a href="#homework">Homework</a></li>
+    <li><a href="#papers">Papers</a></li>
+    <li><a href="#materials">Materials</a></li>
+    <li><a href="https://github.com/suguoming001/llm-pro" target="_blank">GitHub</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-grid"></div>
+    <p class="hero-label">// LLM Course Portfolio</p>
+    <h1 class="hero-title">
+      <span class="line1">大模型</span>
+      <span class="line2">课程作业</span>
+    </h1>
+    <p class="hero-subtitle">
+      从 API 编程到 Agent 范式，从 Prompt Engineering 到私有化部署<br>
+      探索大模型技术的完整学习路径
+    </p>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-number" data-count="6">0</div>
+        <div class="stat-label">作业模块</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number" data-count="3">0</div>
+        <div class="stat-label">论文复现</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number" data-count="100">0</div>
+        <div class="stat-label">最佳准确率 %</div>
+      </div>
+    </div>
+    <div class="scroll-indicator">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Checklist -->
+<section class="checklist-section" id="checklist">
+  <div class="container">
+    <div class="checklist-header fade-in">
+      <div class="checklist-header-left">
+        <h2 class="checklist-title">作业清单</h2>
+        <span class="checklist-progress-text">
+          <span class="done-count" id="doneCount">0</span>
+          <span class="total-count">/ <span id="totalCount">0</span> Completed</span>
+        </span>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+      </div>
+      <div class="checklist-filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="done">Done</button>
+        <button class="filter-btn" data-filter="pending">Pending</button>
+      </div>
+    </div>
+
+    <div class="checklist-groups fade-in" id="checklistGroups">
+      <!-- Groups injected by JS -->
+    </div>
+
+    <div class="checklist-summary fade-in" id="checklistSummary">
+      <div class="summary-item">
+        <div class="summary-dot done"></div>
+        <span class="summary-label">已完成</span>
+        <span class="summary-value done-val" id="summaryDone">0</span>
+      </div>
+      <div class="summary-item">
+        <div class="summary-dot pending"></div>
+        <span class="summary-label">待完成</span>
+        <span class="summary-value pending-val" id="summaryPending">0</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Main Content -->
+<main class="container">
+
+  <!-- Section: 大模型基础 -->
+  <section class="section" id="homework">
+    <div class="section-header fade-in">
+      <div class="section-number">01</div>
+      <p class="section-tag">Module 01</p>
+      <h2 class="section-title">大模型基础</h2>
+      <p class="section-desc">
+        涵盖 API 编程、Prompt Engineering、记忆管理、Agent 范式等核心技能的实践作业
+      </p>
+    </div>
+
+    <div class="hw-grid">
+
+      <!-- 1.1 API编程 -->
+      <div class="hw-card fade-in" style="--card-accent: var(--accent-cyan);">
+        <div class="hw-card-top">
+          <span class="hw-card-id">01-01</span>
+          <span class="hw-card-status">Completed</span>
+        </div>
+        <h3 class="hw-card-title">API 编程课后作业</h3>
+        <p class="hw-card-desc">
+          多轮对话上下文的 3 种高效管理方式（滑动窗口、摘要压缩、Token 截断），以及基于多模态大模型的发票内容提取与自动校验。
+        </p>
+        <div class="hw-card-files">
+          <a class="file-tag" href="作业/1-大模型基础/api编程课后作业/1.多轮对话-滑动窗口.ipynb">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            滑动窗口
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/api编程课后作业/2.多轮对话-摘要压缩法.ipynb">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            摘要压缩
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/api编程课后作业/多轮对话-Token截断法%20.ipynb">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            Token 截断
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/api编程课后作业/发票解析.ipynb">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            发票解析
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/api编程课后作业/发票解析-openai.ipynb">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            发票解析 (OpenAI)
+          </a>
+        </div>
+      </div>
+
+      <!-- 1.2 行业分类 -->
+      <div class="hw-card fade-in" style="--card-accent: var(--accent-magenta);">
+        <div class="hw-card-top">
+          <span class="hw-card-id">01-02</span>
+          <span class="hw-card-status">Completed</span>
+        </div>
+        <h3 class="hw-card-title">行业分类数据打标</h3>
+        <p class="hw-card-desc">
+          制定 20 类行业分类标准，构建评测集与训练数据集，迭代优化 Prompt 使模型打标准确率达到 100%。包含论文复现与 MMLU 模型评测。
+        </p>
+        <div class="hw-card-files">
+          <a class="file-tag" href="作业/1-大模型基础/行业分类数据打标/行业分类数据打标/classifier.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            classifier v1-v5
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/行业分类数据打标/模型评测/模型测试v2.0.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            模型评测 v2.0
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/行业分类数据打标/论文复现/论文总结.md">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            论文总结
+          </a>
+        </div>
+
+        <!-- Results Table -->
+        <div class="results-block">
+          <h4>V2.0 MMLU 评测结果</h4>
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Zero-shot</th>
+                <th>Zero-shot-CoT</th>
+                <th>Few-shot</th>
+                <th>Few-shot-CoT</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="model-name">mimo-v2-pro</td>
+                <td class="highlight">100.00%</td>
+                <td class="highlight">100.00%</td>
+                <td class="highlight">100.00%</td>
+                <td class="highlight">100.00%</td>
+              </tr>
+              <tr>
+                <td class="model-name">deepseek-chat</td>
+                <td>95.00%</td>
+                <td class="highlight">100.00%</td>
+                <td>95.00%</td>
+                <td class="highlight">100.00%</td>
+              </tr>
+              <tr>
+                <td class="model-name">gpt-5-nano</td>
+                <td>95.00%</td>
+                <td>98.33%</td>
+                <td>95.00%</td>
+                <td>96.67%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 1.3 记忆作业 -->
+      <div class="hw-card fade-in" style="--card-accent: var(--accent-yellow);">
+        <div class="hw-card-top">
+          <span class="hw-card-id">01-03</span>
+          <span class="hw-card-status">Completed</span>
+        </div>
+        <h3 class="hw-card-title">记忆作业</h3>
+        <p class="hw-card-desc">
+          整合持久化存储、消息裁剪、会话压缩三大机制，封装成通用聊天机器人。支持多会话管理与上下文智能裁剪。
+        </p>
+        <div class="hw-card-files">
+          <a class="file-tag" href="作业/1-大模型基础/记忆作业/chatbot.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            chatbot.py
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/记忆作业/store.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            store.py
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/记忆作业/context.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            context.py
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/记忆作业/compressor.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            compressor.py
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/记忆作业/models.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            models.py
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/记忆作业/main.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            main.py
+          </a>
+        </div>
+      </div>
+
+      <!-- 1.4 ReAct -->
+      <div class="hw-card fade-in" style="--card-accent: var(--accent-orange);">
+        <div class="hw-card-top">
+          <span class="hw-card-id">01-04</span>
+          <span class="hw-card-status">Completed</span>
+        </div>
+        <h3 class="hw-card-title">ReAct 作业</h3>
+        <p class="hw-card-desc">
+          实现三种经典 Agent 范式：ReAct（推理+行动）、Plan-and-Solve（规划-执行）、Reflection（反思），并完成论文精读。
+        </p>
+        <div class="hw-card-files">
+          <a class="file-tag" href="作业/1-大模型基础/ReAct作业/ReAct.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            ReAct.py
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/ReAct作业/ReAct-VibeCoding.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            ReAct (VibeCoding)
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/ReAct作业/Plan_and_solve.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            Plan-and-Solve
+          </a>
+          <a class="file-tag" href="作业/1-大模型基础/ReAct作业/Reflexion.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            Reflexion
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section: Papers -->
+  <section class="section" id="papers">
+    <div class="section-header fade-in">
+      <div class="section-number">02</div>
+      <p class="section-tag">Research</p>
+      <h2 class="section-title">论文复现</h2>
+      <p class="section-desc">精读三篇 Prompt Engineering 领域的里程碑论文，并用代码复现核心实验效果</p>
+    </div>
+
+    <div class="papers-grid fade-in">
+      <a class="paper-card" href="作业/1-大模型基础/行业分类数据打标/论文复现/Language%20Models%20are%20Few-Shot%20Learners.ipynb">
+        <h4 class="paper-card-title">Language Models are Few-Shot Learners</h4>
+        <p class="paper-card-link">GPT-3 / OpenAI 2020 &rarr;</p>
+      </a>
+      <a class="paper-card" href="作业/1-大模型基础/行业分类数据打标/论文复现/Chain-of-Thought.ipynb">
+        <h4 class="paper-card-title">Chain-of-Thought Prompting Elicits Reasoning in Large Language Models</h4>
+        <p class="paper-card-link">CoT / Google 2022 &rarr;</p>
+      </a>
+      <a class="paper-card" href="作业/1-大模型基础/行业分类数据打标/论文复现/Large%20Language%20Models%20are%20Zero-Shot%20Reasoners.ipynb">
+        <h4 class="paper-card-title">Large Language Models are Zero-Shot Reasoners</h4>
+        <p class="paper-card-link">Let's think step by step / 2022 &rarr;</p>
+      </a>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section: 私有化部署 -->
+  <section class="section">
+    <div class="section-header fade-in">
+      <div class="section-number">03</div>
+      <p class="section-tag">Module 02</p>
+      <h2 class="section-title">私有化部署</h2>
+      <p class="section-desc">基于 Ollama 的本地大模型部署与多模态能力测试</p>
+    </div>
+
+    <div class="hw-grid">
+      <div class="hw-card fade-in" style="--card-accent: var(--accent-cyan);">
+        <div class="hw-card-top">
+          <span class="hw-card-id">02-01</span>
+          <span class="hw-card-status">Completed</span>
+        </div>
+        <h3 class="hw-card-title">Ollama 本地部署</h3>
+        <p class="hw-card-desc">
+          使用 Ollama 在本地运行大模型，完成文本对话与多模态图片理解的测试验证。
+        </p>
+        <div class="hw-card-files">
+          <a class="file-tag" href="作业/2-私有化部署/2-1-ollama/01-ollama_test.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            文本对话测试
+          </a>
+          <a class="file-tag" href="作业/2-私有化部署/2-1-ollama/02-ollama_img_test.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            多模态图片测试
+          </a>
+          <a class="file-tag" href="作业/2-私有化部署/2-1-ollama/OpenUIFC.py">
+            <svg viewBox="0 0 16 16"><path d="M3.75 1.5a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6H9.75A1.75 1.75 0 018 4.25V1.5H3.75zm5.75.56v2.19c0 .138.112.25.25.25h2.19L9.5 2.06zM2 1.75C2 .784 2.784 0 3.75 0h5.086c.464 0 .909.184 1.237.513l3.414 3.414c.329.328.513.773.513 1.237v9.086A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75z"/></svg>
+            OpenUI 功能调用
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- Section: 辅导资料 -->
+  <section class="section" id="materials">
+    <div class="section-header fade-in">
+      <div class="section-number">04</div>
+      <p class="section-tag">Resources</p>
+      <h2 class="section-title">辅导资料</h2>
+      <p class="section-desc">课程配套的学习资源与参考资料</p>
+    </div>
+
+    <div class="materials-grid fade-in">
+      <a class="material-card" href="辅导资料/Prompt%20Engineering%20For%20Developers/">
+        <div class="material-card-icon">[ ]</div>
+        <h3 class="material-card-title">Prompt Engineering For Developers</h3>
+        <p class="material-card-desc">提示词工程教程，涵盖简介、提示原则、迭代优化、文本概括、推断、文本转换、文本扩展、聊天机器人等 9 章内容</p>
+      </a>
+      <a class="material-card" href="辅导资料/api编程/">
+        <div class="material-card-icon">&lt;/&gt;</div>
+        <h3 class="material-card-title">API 编程</h3>
+        <p class="material-card-desc">API 编程全流程教程：快速接入、文本模态、多模态、工具调用规范、动态天气查询、并行/串行执行、记忆测试</p>
+      </a>
+      <a class="material-card" href="辅导资料/提示词/">
+        <div class="material-card-icon">&gt;_</div>
+        <h3 class="material-card-title">提示词</h3>
+        <p class="material-card-desc">提示词评测测试与 case 演练，用于验证和优化 Prompt Engineering 的实践效果</p>
+      </a>
+    </div>
+  </section>
+
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="container">
+    <p class="footer-text">
+      <a class="footer-link" href="https://github.com/suguoming001/llm-pro" target="_blank">GitHub</a>
+      &nbsp;&middot;&nbsp; LLM Pro &copy; 2026
+    </p>
+  </div>
+</footer>
+
+<script>
+// ===== Constellation Background =====
+const canvas = document.getElementById('bg-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+let mouse = { x: -1000, y: -1000 };
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+document.addEventListener('mousemove', e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY;
+});
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = (Math.random() - 0.5) * 0.3;
+    this.radius = Math.random() * 1.5 + 0.5;
+    this.opacity = Math.random() * 0.5 + 0.1;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+    if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+
+    const dx = mouse.x - this.x;
+    const dy = mouse.y - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 150) {
+      this.x -= dx * 0.01;
+      this.y -= dy * 0.01;
+    }
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0, 240, 255, ${this.opacity})`;
+    ctx.fill();
+  }
+}
+
+for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+function drawLines() {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 120) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(0, 240, 255, ${0.08 * (1 - dist / 120)})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function animate() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => { p.update(); p.draw(); });
+  drawLines();
+  requestAnimationFrame(animate);
+}
+animate();
+
+// ===== Scroll Animations =====
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => entry.target.classList.add('visible'), i * 100);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// ===== Nav Visibility =====
+const nav = document.getElementById('nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('visible', window.scrollY > window.innerHeight * 0.5);
+});
+
+// ===== Counter Animation =====
+function animateCounters() {
+  document.querySelectorAll('.stat-number[data-count]').forEach(el => {
+    const target = parseInt(el.dataset.count);
+    const duration = 2000;
+    const start = performance.now();
+
+    function step(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(eased * target);
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+const heroObserver = new IntersectionObserver((entries) => {
+  if (entries[0].isIntersecting) {
+    animateCounters();
+    heroObserver.disconnect();
+  }
+}, { threshold: 0.5 });
+heroObserver.observe(document.querySelector('.hero-stats'));
+
+// ===== Checklist =====
+const checklistData = [
+  {
+    name: 'API 编程课后作业',
+    badge: '01-01',
+    accent: 'var(--accent-cyan)',
+    items: [
+      { text: '多轮对话 - 滑动窗口法', done: true, tag: 'notebook', link: '作业/1-大模型基础/api编程课后作业/1.多轮对话-滑动窗口.ipynb' },
+      { text: '多轮对话 - 摘要压缩法', done: true, tag: 'notebook', link: '作业/1-大模型基础/api编程课后作业/2.多轮对话-摘要压缩法.ipynb' },
+      { text: '多轮对话 - Token 截断法', done: true, tag: 'notebook', link: '作业/1-大模型基础/api编程课后作业/多轮对话-Token截断法 .ipynb' },
+      { text: '发票内容提取与校验', done: true, tag: 'notebook', link: '作业/1-大模型基础/api编程课后作业/发票解析.ipynb' },
+      { text: '发票解析 (OpenAI 版本)', done: true, tag: 'notebook', link: '作业/1-大模型基础/api编程课后作业/发票解析-openai.ipynb' },
+    ]
+  },
+  {
+    name: '行业分类数据打标',
+    badge: '01-02',
+    accent: 'var(--accent-magenta)',
+    items: [
+      { text: '制定 20 个行业分类标准', done: true, tag: '人工' },
+      { text: '制作评测集 (200 条, 交叉验证)', done: true, tag: '人工' },
+      { text: '制作数据打标 Prompt', done: true, tag: 'prompt' },
+      { text: '模型打标正确率 >= 92%', done: true, tag: '达成 100%' },
+      { text: '制作训练数据集 (40000 条)', done: true, tag: '数据' },
+      { text: '行业分类器 v1', done: true, tag: 'py', link: '作业/1-大模型基础/行业分类数据打标/行业分类数据打标/classifier.py' },
+      { text: '行业分类器 v2', done: true, tag: 'py', link: '作业/1-大模型基础/行业分类数据打标/行业分类数据打标/classifier_v2.py' },
+      { text: '行业分类器 v3', done: true, tag: 'py', link: '作业/1-大模型基础/行业分类数据打标/行业分类数据打标/classifier_v3.py' },
+      { text: '行业分类器 v4', done: true, tag: 'py', link: '作业/1-大模型基础/行业分类数据打标/行业分类数据打标/classifier_v4.py' },
+      { text: '行业分类器 v5', done: true, tag: 'py', link: '作业/1-大模型基础/行业分类数据打标/行业分类数据打标/classifier_v5.py' },
+    ]
+  },
+  {
+    name: '论文复现',
+    badge: '01-02',
+    accent: 'var(--accent-orange)',
+    items: [
+      { text: 'Language Models are Few-Shot Learners (GPT-3)', done: true, tag: 'notebook', link: '作业/1-大模型基础/行业分类数据打标/论文复现/Language Models are Few-Shot Learners.ipynb' },
+      { text: 'Chain-of-Thought Prompting Elicits Reasoning', done: true, tag: 'notebook', link: '作业/1-大模型基础/行业分类数据打标/论文复现/Chain-of-Thought.ipynb' },
+      { text: 'Large Language Models are Zero-Shot Reasoners', done: true, tag: 'notebook', link: '作业/1-大模型基础/行业分类数据打标/论文复现/Large Language Models are Zero-Shot Reasoners.ipynb' },
+      { text: '论文核心结论总结', done: true, tag: 'md', link: '作业/1-大模型基础/行业分类数据打标/论文复现/论文总结.md' },
+    ]
+  },
+  {
+    name: '模型评测',
+    badge: '01-02',
+    accent: 'var(--accent-yellow)',
+    items: [
+      { text: 'MMLU 评测集数据准备', done: true, tag: '数据' },
+      { text: '模型评测 v1.0 (mimo/deepseek/gpt)', done: true, tag: 'py', link: '作业/1-大模型基础/行业分类数据打标/模型评测/模型测试v1.0.py' },
+      { text: '模型评测 v2.0 (优化 prompt 策略)', done: true, tag: 'py', link: '作业/1-大模型基础/行业分类数据打标/模型评测/模型测试v2.0.py' },
+      { text: '评测集 Excel 数据处理', done: true, tag: 'py', link: '作业/1-大模型基础/行业分类数据打标/模型评测/评测集excel.py' },
+    ]
+  },
+  {
+    name: '记忆作业',
+    badge: '01-03',
+    accent: 'var(--accent-cyan)',
+    items: [
+      { text: '持久化存储模块 (store)', done: true, tag: 'py', link: '作业/1-大模型基础/记忆作业/store.py' },
+      { text: '上下文裁剪模块 (context)', done: true, tag: 'py', link: '作业/1-大模型基础/记忆作业/context.py' },
+      { text: '会话压缩模块 (compressor)', done: true, tag: 'py', link: '作业/1-大模型基础/记忆作业/compressor.py' },
+      { text: '数据模型定义 (models)', done: true, tag: 'py', link: '作业/1-大模型基础/记忆作业/models.py' },
+      { text: '聊天机器人主模块 (chatbot)', done: true, tag: 'py', link: '作业/1-大模型基础/记忆作业/chatbot.py' },
+      { text: '入口文件 (main)', done: true, tag: 'py', link: '作业/1-大模型基础/记忆作业/main.py' },
+    ]
+  },
+  {
+    name: 'ReAct 作业',
+    badge: '01-04',
+    accent: 'var(--accent-orange)',
+    items: [
+      { text: 'ReAct 论文精读', done: true, tag: '论文' },
+      { text: 'ReAct Agent 实现', done: true, tag: 'py', link: '作业/1-大模型基础/ReAct作业/ReAct.py' },
+      { text: 'ReAct VibeCoding 版本', done: true, tag: 'py', link: '作业/1-大模型基础/ReAct作业/ReAct-VibeCoding.py' },
+      { text: 'Plan-and-Solve 范式实现', done: true, tag: 'py', link: '作业/1-大模型基础/ReAct作业/Plan_and_solve.py' },
+      { text: 'Reflexion 范式实现', done: true, tag: 'py', link: '作业/1-大模型基础/ReAct作业/Reflexion.py' },
+    ]
+  },
+  {
+    name: '私有化部署',
+    badge: '02-01',
+    accent: 'var(--accent-cyan)',
+    items: [
+      { text: 'Ollama 文本对话测试', done: true, tag: 'py', link: '作业/2-私有化部署/2-1-ollama/01-ollama_test.py' },
+      { text: 'Ollama 多模态图片测试', done: true, tag: 'py', link: '作业/2-私有化部署/2-1-ollama/02-ollama_img_test.py' },
+      { text: 'OpenUI 功能调用', done: true, tag: 'py', link: '作业/2-私有化部署/2-1-ollama/OpenUIFC.py' },
+    ]
+  },
+];
+
+const CHECKBOX_SVG = '<svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>';
+let currentFilter = 'all';
+
+function getChecklistStorage() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('llm-pro-checklist') || '{}');
+    return saved;
+  } catch { return {}; }
+}
+
+function saveChecklistStorage(state) {
+  localStorage.setItem('llm-pro-checklist', JSON.stringify(state));
+}
+
+function renderChecklist() {
+  const container = document.getElementById('checklistGroups');
+  const storage = getChecklistStorage();
+  container.innerHTML = '';
+
+  let totalDone = 0, totalItems = 0;
+
+  checklistData.forEach((group, gi) => {
+    const groupState = group.items.map((item, ii) => {
+      const key = `${gi}-${ii}`;
+      const done = storage[key] !== undefined ? storage[key] : item.done;
+      return { ...item, done, key };
+    });
+
+    const filtered = groupState.filter(item => {
+      if (currentFilter === 'done') return item.done;
+      if (currentFilter === 'pending') return !item.done;
+      return true;
+    });
+
+    const groupDoneCount = groupState.filter(i => i.done).length;
+    totalDone += groupDoneCount;
+    totalItems += groupState.length;
+
+    if (filtered.length === 0 && currentFilter !== 'all') return;
+
+    const groupEl = document.createElement('div');
+    groupEl.className = 'checklist-group';
+    groupEl.style.setProperty('--group-accent', group.accent);
+    groupEl.innerHTML = `
+      <div class="checklist-group-header">
+        <div class="checklist-group-left">
+          <span class="group-badge">${group.badge}</span>
+          <span class="group-name">${group.name}</span>
+          <span class="group-count">${groupDoneCount}/${groupState.length}</span>
+        </div>
+        <span class="group-arrow">&#9660;</span>
+      </div>
+      <div class="checklist-items">
+        ${filtered.map(item => `
+          <div class="checklist-item" data-key="${item.key}">
+            <div class="check-box ${item.done ? 'checked' : ''}" data-key="${item.key}">${CHECKBOX_SVG}</div>
+            <span class="item-text ${item.done ? 'done' : ''}">${item.text}</span>
+            ${item.tag ? `<span class="item-tag">${item.tag}</span>` : ''}
+            ${item.link ? `<a class="item-link" href="${encodeURI(item.link)}">Open</a>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // Toggle collapse
+    groupEl.querySelector('.checklist-group-header').addEventListener('click', () => {
+      groupEl.classList.toggle('collapsed');
+    });
+
+    container.appendChild(groupEl);
+  });
+
+  // Update progress
+  document.getElementById('doneCount').textContent = totalDone;
+  document.getElementById('totalCount').textContent = totalItems;
+  document.getElementById('summaryDone').textContent = totalDone;
+  document.getElementById('summaryPending').textContent = totalItems - totalDone;
+
+  const pct = totalItems > 0 ? (totalDone / totalItems * 100) : 0;
+  setTimeout(() => {
+    document.getElementById('progressBar').style.width = pct + '%';
+  }, 300);
+
+  // Checkbox click handlers
+  container.querySelectorAll('.check-box').forEach(box => {
+    box.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const key = box.dataset.key;
+      const st = getChecklistStorage();
+      const item = checklistData.flatMap((g, gi) => g.items.map((it, ii) => ({ ...it, key: `${gi}-${ii}`, defaultDone: it.done }))).find(i => i.key === key);
+      const currentDone = st[key] !== undefined ? st[key] : item.defaultDone;
+      st[key] = !currentDone;
+      saveChecklistStorage(st);
+      renderChecklist();
+    });
+  });
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderChecklist();
+  });
+});
+
+renderChecklist();
+</script>
+
+</body>
+</html>
