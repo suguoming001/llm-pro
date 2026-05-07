@@ -143,8 +143,6 @@
 |------|------|
 | [01-ollama_test.py](作业/2-私有化部署/2-1-ollama/01-ollama_test.py) | Ollama 文本对话测试 |
 | [02-ollama_img_test.py](作业/2-私有化部署/2-1-ollama/02-ollama_img_test.py) | Ollama 多模态图片测试 |
-| [OpenUIFC.py](作业/2-私有化部署/2-1-ollama/OpenUIFC.py) | OpenUI 功能调用 |
-
 ---
 
 ## 辅导资料
