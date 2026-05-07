@@ -266,7 +266,7 @@ def run_evaluation(solver: TagSolveSolver, tasks: List[Task]):
 
 
 if __name__ == '__main__':
-    task_list = load_tasks_from_excel('./data/标签分类.xlsx')
+    task_list = load_tasks_from_excel('data/标签分类.xlsx')
     llm_client = LLMClient(model_name="deepseek-reasoner")
     solver = TagSolveSolver(llm_client)
     run_evaluation(solver, task_list)

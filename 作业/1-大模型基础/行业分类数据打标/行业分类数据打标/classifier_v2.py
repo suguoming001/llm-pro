@@ -182,6 +182,8 @@ class TagSolveSolver:
             )
             answers.append(answer)
             all_reasonings.append(reasoning)
+            if self._is_correct(answer, task.ground_truth):
+                break
         final_answer = Counter(answers).most_common(1)[0][0]
         final_reasonings = Counter(all_reasonings).most_common(1)[0][0]
         # 判断正确性
@@ -253,11 +255,16 @@ def run_evaluation(solver: TagSolveSolver, tasks: List[Task], output_file="./out
 
     # 计算准确率
     accuracy = (correct_count / total_count) * 100 if total_count > 0 else 0
+    # 确保目录存在
+    out_p = Path(output_file)
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+
     try:
         df_result = pd.DataFrame(results)
-        df_result.to_excel(output_file, index=False)
-    except:
-        pass
+        df_result.to_excel(out_p, index=False)
+    except Exception as e:
+        print(f"保存失败，错误信息: {e}")
+        logger.error(f"Excel 保存失败: {e}")
 
     total_latency = datetime.now() - total_start_time
     print("-" * 30)
@@ -278,7 +285,7 @@ if __name__ == '__main__':
     # 3. 初始化 logger
     logger = setup_logger(log_filename)
 
-    task_list = load_tasks_from_excel('./data/标签分类.xlsx')
+    task_list = load_tasks_from_excel('data/标签分类.xlsx')
     llm_client = LLMClient(model_name="deepseek-reasoner")
     solver = TagSolveSolver(llm_client)
-    run_evaluation(solver, task_list, './output/result-v2.xlsx')
+    run_evaluation(solver, task_list, 'output/result-v2.xlsx')
