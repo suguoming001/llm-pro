@@ -1,16 +1,19 @@
-
+import os
 from openai import OpenAI
-
-client = OpenAI(api_key="test", base_url="http://106.75.244.51:11434/v1")
-
+from dotenv import load_dotenv
 import base64
+
+load_dotenv(override=True)
+
+client = OpenAI(api_key="test", base_url=os.getenv("OLLAMA_BASE_URL"))
+
 def encode_image(image_path):
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode("utf-8")
 
+
 image_path = "./test.jpg"
 base64_image = encode_image(image_path)
-
 
 response = client.chat.completions.create(
     model="qwen3-vl:8b",
